@@ -95,11 +95,21 @@ func buildCaddyfile(tunnel *config.TunnelConfig) string {
 		port = 443
 	}
 
+	// HTTP/3 (QUIC) is intentionally disabled: Caddy opens a QUIC listener on
+	// UDP/<port> for every TLS site and treats a failure to bind that socket as
+	// fatal. SlipGate's firewall rules only ever open TCP/<port>, so HTTP/3 is
+	// unreachable from outside anyway, while any co-hosted UDP service on the
+	// same port (e.g. AmneziaWG/QUIC obfuscation listening on 443/udp) makes
+	// Caddy exit with "starting HTTP/3 QUIC listener: listen udp :443: bind:
+	// address already in use" and crash-loop the tunnel service.
 	return fmt.Sprintf(`{
   admin off
   log {
     output stdout
     level WARN
+  }
+  servers {
+    protocols h1 h2
   }
 }
 
